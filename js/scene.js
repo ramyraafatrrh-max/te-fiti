@@ -9,7 +9,6 @@ const mix = (a, b, t) => {
 
 const SHAKE_BY_STAGE = [3, 2, 2, 1, 1, 0];
 
-// Leaf & flower positions on her hair / shoulders / island
 const LEAVES = [
   [122, 150, -60], [112, 195, -70], [100, 240, -75], [86, 285, -80], [72, 325, -85],
   [278, 150, 60], [288, 195, 70], [300, 240, 75], [314, 285, 80], [328, 325, 85],
@@ -35,6 +34,7 @@ export class Scene {
     this.intensity = 1;
     this.particles = [];
     this.healed = false;
+    this.timers = [];
     this.buildDecor();
     this.resize();
     new ResizeObserver(() => this.resize()).observe(this.wrap);
@@ -86,14 +86,17 @@ export class Scene {
 
   setFill(ids, color) { ids.forEach((id) => this.svg.querySelectorAll(id).forEach((el) => (el.style.fill = color))); }
   setOpacity(id, v) { const el = this.q(id); if (el) el.style.opacity = v; }
-
   setInstant(on) { this.svg.classList.toggle("no-anim", !!on); }
 
   // Stage 0 … total-1 = calming lava demon; stage === total = healed
   setStage(stage, { instant = false } = {}) {
+    this.timers.forEach(clearTimeout);
+    this.timers = [];
     if (instant) this.setInstant(true);
     if (stage >= this.total) { this.heal(instant); return; }
 
+    this.healed = false;
+    this.svg.classList.remove("heart-burst");
     const p = stage / this.total;
     this.setFill([".skin"], mix("#2a1714", "#6e5d55", p));
     this.setFill([".hair"], mix("#170b09", "#4b3f3a", p));
@@ -109,7 +112,6 @@ export class Scene {
     this.setOpacity("faceCalm", 0);
     this.setOpacity("leaves", 0);
 
-    // Face softens: eyebrows relax, mouth closes, eyes cool down
     this.q("browL").style.transform = `rotate(${-18 * p}deg)`;
     this.q("browR").style.transform = `rotate(${18 * p}deg)`;
     this.q("mouthAngry").style.transform = `scaleY(${(1 - 0.75 * p).toFixed(2)})`;
@@ -150,7 +152,6 @@ export class Scene {
 
   heal(instant = false) {
     this.healed = true;
-    if (instant) this.setInstant(true);
     const apply = () => {
       this.setFill([".skin"], "#58c777");
       this.setFill([".hair"], "#15603a");
@@ -173,24 +174,24 @@ export class Scene {
       this.intensity = 1;
     };
     if (instant) {
+      this.setInstant(true);
       apply();
       requestAnimationFrame(() => requestAnimationFrame(() => this.setInstant(false)));
       return;
     }
-    // Transformation sequence: heart burst -> flash -> green goddess
     this.setHeart(this.total);
     this.svg.classList.add("heart-burst");
     this.pulse();
-    setTimeout(() => {
+    this.timers.push(setTimeout(() => {
       this.flash.classList.remove("go");
       void this.flash.offsetWidth;
       this.flash.classList.add("go");
-    }, 700);
-    setTimeout(() => {
+    }, 700));
+    this.timers.push(setTimeout(() => {
       apply();
       this.burst(90, "love");
       this.svg.classList.remove("heart-burst");
-    }, 1100);
+    }, 1100));
   }
 
   // ---------------- particles ----------------

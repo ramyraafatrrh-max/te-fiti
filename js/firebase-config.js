@@ -1,5 +1,5 @@
 // =====================================================================
-//  1) Paste YOUR Firebase web-app config here
+//  1) Paste YOUR Firebase web-app config here (keep the quotes and commas)
 //     Firebase Console -> Project settings -> General -> Your apps -> SDK setup and configuration -> Config
 // =====================================================================
 export const firebaseConfig = {
@@ -12,6 +12,8 @@ export const firebaseConfig = {
 };
 
 // =====================================================================
-//  2) PIN to open the monitoring screen (monitor.html)
+//  2) Moderator account (used to log in to monitor.html)
+//     Create this user in Firebase -> Authentication -> Users -> Add user.
+//     Use lowercase letters, and put the SAME email in firestore.rules.
 // =====================================================================
-export const MONITOR_PIN = "2026";
+export const ADMIN_EMAIL = "ramy.tefiti@gmail.com";

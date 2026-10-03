@@ -11,18 +11,21 @@
   <link rel="stylesheet" href="css/monitor.css" />
 </head>
 <body>
-  <!-- PIN gate -->
+  <!-- Moderator login -->
   <section id="gate" class="screen active">
-    <form id="gate-form" class="card" autocomplete="off" style="text-align:center">
-      <h2>Voyage Monitor</h2>
-      <p class="muted">Enter the moderator PIN to view all teams.</p>
-      <input id="gate-pin" type="password" inputmode="numeric" placeholder="PIN" style="text-align:center;letter-spacing:6px" />
-      <p id="gate-error" class="error-text" hidden>Wrong PIN</p>
-      <button class="btn primary" type="submit">Open Monitor</button>
+    <form id="gate-form" class="card" autocomplete="off">
+      <h2 style="text-align:center">Voyage Monitor</h2>
+      <p class="muted" style="text-align:center">Moderator login</p>
+      <label for="gate-email">Moderator email</label>
+      <input id="gate-email" type="email" autocomplete="username" required />
+      <label for="gate-pass">Password</label>
+      <input id="gate-pass" type="password" autocomplete="current-password" required />
+      <p id="gate-error" class="error-text" hidden></p>
+      <button id="gate-btn" class="btn primary" type="submit">Open Monitor</button>
     </form>
   </section>
 
-  <!-- dashboard -->
+  <!-- Dashboard -->
   <section id="dash" class="screen">
     <header class="mon-head">
       <div>
@@ -37,16 +40,39 @@
       </div>
     </header>
 
+    <div class="mon-tools">
+      <button id="btn-reset-all" class="tool warn">↺ Reset all teams</button>
+      <button id="btn-delete-all" class="tool danger">🗑 Delete all teams</button>
+      <span class="spacer"></span>
+      <button id="btn-signout" class="tool">Sign out</button>
+    </div>
+
     <div id="champion" class="champion" hidden></div>
 
     <div class="mon-table">
       <div class="mon-row mon-header">
-        <span>#</span><span>Team</span><span>Te Fiti</span><span>Heart</span><span>Stations</span><span>Wrong</span><span>Time</span><span>Last activity</span>
+        <span>#</span><span>Team</span><span>Te Fiti</span><span>Heart</span><span>Stations</span><span>Wrong</span><span>Time</span><span>Last activity</span><span>Actions</span>
       </div>
       <div id="rows"></div>
       <p id="empty" class="muted empty">No teams registered yet. Waiting for the first canoe… 🛶</p>
     </div>
   </section>
+
+  <!-- Confirmation dialog -->
+  <div id="confirm" class="modal" hidden>
+    <div class="modal-card confirm-card">
+      <h2 id="cf-title">Are you sure?</h2>
+      <p id="cf-text"></p>
+      <div id="cf-type-wrap" hidden>
+        <label for="cf-type">Type <b id="cf-word"></b> to confirm</label>
+        <input id="cf-type" autocomplete="off" />
+      </div>
+      <div class="cf-buttons">
+        <button id="cf-cancel" class="btn ghost">Cancel</button>
+        <button id="cf-ok" class="btn danger">Confirm</button>
+      </div>
+    </div>
+  </div>
 
   <div id="toast" role="status" aria-live="polite"></div>
   <script type="module" src="js/monitor.js"></script>

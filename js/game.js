@@ -1,10 +1,13 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
-  getFirestore, collection, doc, addDoc, getDoc, getDocs, updateDoc,
-  query, where, serverTimestamp, arrayUnion, increment
+  getAuth, onAuthStateChanged, createUserWithEmailAndPassword,
+  signInWithEmailAndPassword, signOut
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot,
+  serverTimestamp, arrayUnion, increment
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js";
+import { firebaseConfig, ADMIN_EMAIL } from "./firebase-config.js";
 import { STATIONS, SALT, TOTAL_CODES, STORY_LINES } from "./codes.js";
 import { Scene } from "./scene.js";
 import * as sfx from "./audio.js";
@@ -13,10 +16,8 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const LS_KEY = "tefiti_team_id";
 const $ = (s) => document.querySelector(s);
-
-const state = { user: null, teamId: null, team: null, solved: [], busy: false, timer: null, saved: null };
+const state = { teamId: null, team: null, solved: [], busy: false, timer: null, unsub: null, started: false };
 let scene;
 
 // ---------------- helpers ----------------
@@ -25,17 +26,26 @@ function show(id) {
   window.scrollTo(0, 0);
 }
 
-function toast(msg, type = "info") {
+function toast(msg, type = "info", ms = 2800) {
   const t = $("#toast");
   t.textContent = msg;
   t.className = "show " + type;
   clearTimeout(t._h);
-  t._h = setTimeout(() => (t.className = ""), 2800);
+  t._h = setTimeout(() => (t.className = ""), ms);
 }
 
 async function sha256(text) {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+const cleanName = (s) => s.trim().replace(/\s+/g, " ");
+const nameKey = (s) => cleanName(s).toLowerCase();
+
+// Each team is a Firebase Auth account. The team name is turned into a private
+// login e-mail, so the team only needs to remember its name + password.
+async function teamEmail(name) {
+  return "team-" + (await sha256("tefiti-team|" + nameKey(name))).slice(0, 40) + "@tefiti-teams.app";
 }
 
 function fmt(ms) {
@@ -46,119 +56,242 @@ function fmt(ms) {
 }
 
 const teamRef = () => doc(db, "teams", state.teamId);
-const saveErr = (e) => { console.error(e); toast("Progress not saved — check your connection.", "error"); };
 
-// ---------------- auth ----------------
-const authReady = new Promise((resolve) => {
-  onAuthStateChanged(auth, (u) => { if (u) { state.user = u; resolve(u); } });
-});
-signInAnonymously(auth).catch((err) => {
-  console.error(err);
-  const s = $("#conn-status");
-  s.textContent = "Could not connect (" + (err.code || err.message) + "). Check the Firebase setup.";
-  s.classList.add("bad");
-});
+function formError(id, msg) {
+  const e = $(id);
+  e.textContent = msg || "";
+  e.hidden = !msg;
+}
+
+function busyBtn(btn, on, text) {
+  if (on) { btn.dataset.label = btn.textContent; btn.textContent = text; btn.disabled = true; }
+  else { btn.textContent = btn.dataset.label || btn.textContent; btn.disabled = false; }
+}
+
+const isAdminUser = (u) => u && u.email && u.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 
 // ---------------- startup ----------------
-async function init() {
+function init() {
   scene = new Scene($("#scene-wrap"), TOTAL_CODES);
   buildPips();
   bindUI();
 
-  await authReady;
-  const s = $("#conn-status");
-  s.textContent = "Connected — the ocean is ready.";
-  s.classList.add("ok");
-  $("#btn-begin").disabled = false;
-
-  const savedId = localStorage.getItem(LS_KEY);
-  if (savedId) {
-    try {
-      const snap = await getDoc(doc(db, "teams", savedId));
-      if (snap.exists() && snap.data().uid === state.user.uid) {
-        state.saved = { id: savedId, data: snap.data() };
-        const b = $("#btn-continue");
-        b.textContent = `Continue as “${snap.data().name}”`;
-        b.hidden = false;
-      } else {
-        localStorage.removeItem(LS_KEY);
-      }
-    } catch (e) { console.warn(e); }
+  const status = $("#conn-status");
+  if (!firebaseConfig.apiKey || firebaseConfig.apiKey.startsWith("PASTE")) {
+    status.textContent = "Firebase is not configured yet — add your config to js/firebase-config.js.";
+    status.classList.add("bad");
+    return;
   }
+
+  let first = true;
+  onAuthStateChanged(auth, async (user) => {
+    if (!first) return;
+    first = false;
+    status.textContent = "Connected — the ocean is ready.";
+    status.classList.add("ok");
+    $("#btn-begin").disabled = false;
+    $("#btn-login").disabled = false;
+
+    // Already logged in on this device? Offer to continue.
+    if (user && !isAdminUser(user)) {
+      try {
+        const snap = await getDoc(doc(db, "teams", user.uid));
+        if (snap.exists()) {
+          const b = $("#btn-continue");
+          b.textContent = `Continue as “${snap.data().name}”`;
+          b.hidden = false;
+          b.onclick = () => { sfx.init(); sfx.click(); enterTeam(user.uid); };
+        }
+      } catch (e) { console.warn(e); }
+    }
+  });
 }
 
 function bindUI() {
   $("#btn-begin").addEventListener("click", () => {
     sfx.init(); sfx.click();
     show("screen-register");
-    setTimeout(() => $("#team-name").focus(), 50);
+    setTimeout(() => $("#reg-name").focus(), 50);
   });
-  $("#btn-continue").addEventListener("click", () => {
+  $("#btn-login").addEventListener("click", () => {
     sfx.init(); sfx.click();
-    if (state.saved) startGame(state.saved.id, state.saved.data);
+    show("screen-login");
+    setTimeout(() => $("#login-name").focus(), 50);
   });
-  $("#btn-back").addEventListener("click", () => show("screen-welcome"));
+  document.querySelectorAll(".js-back").forEach((b) => b.addEventListener("click", () => show("screen-welcome")));
   $("#form-register").addEventListener("submit", register);
+  $("#form-login").addEventListener("submit", login);
   $("#btn-mute").addEventListener("click", () => {
-    const m = sfx.toggleMute();
-    $("#btn-mute").textContent = m ? "🔇" : "🔊";
+    $("#btn-mute").textContent = sfx.toggleMute() ? "🔇" : "🔊";
+  });
+  $("#btn-logout").addEventListener("click", async () => {
+    if (!confirm("Log out of this team? You can log in again with the team name and password.")) return;
+    await leaveGame();
+    toast("Logged out.", "info");
   });
   $("#btn-close-win").addEventListener("click", () => ($("#modal-win").hidden = true));
 }
 
 // ---------------- registration ----------------
-function formError(msg) {
-  const e = $("#form-error");
-  e.textContent = msg;
-  e.hidden = !msg;
-}
-
 async function register(ev) {
   ev.preventDefault();
   sfx.init();
-  formError("");
-  const name = $("#team-name").value.trim().replace(/\s+/g, " ");
-  const members = $("#team-members").value.trim().slice(0, 200);
-  if (name.length < 2) return formError("Please enter a team name (at least 2 characters).");
+  formError("#reg-error", "");
+  const name = cleanName($("#reg-name").value);
+  const members = $("#reg-members").value.trim().slice(0, 200);
+  const pass = $("#reg-pass").value;
+  const pass2 = $("#reg-pass2").value;
+
+  if (name.length < 2) return formError("#reg-error", "Please enter a team name (at least 2 characters).");
+  if (pass.length < 6) return formError("#reg-error", "The password must be at least 6 characters.");
+  if (pass !== pass2) return formError("#reg-error", "The two passwords don't match.");
 
   const btn = $("#btn-register");
-  btn.disabled = true;
-  btn.textContent = "Launching the canoe…";
+  busyBtn(btn, true, "Launching the canoe…");
   try {
-    const nameKey = name.toLowerCase();
-    const dup = await getDocs(query(collection(db, "teams"), where("nameKey", "==", nameKey)));
-    if (!dup.empty) return formError("That team name is already taken — please choose another.");
+    const email = await teamEmail(name);
+    let user;
+    try {
+      user = (await createUserWithEmailAndPassword(auth, email, pass)).user;
+    } catch (err) {
+      if (err.code !== "auth/email-already-in-use") throw err;
+      // Name was used before. If the same password is given and the team was
+      // deleted by the moderator, allow registering it again.
+      try {
+        user = (await signInWithEmailAndPassword(auth, email, pass)).user;
+      } catch {
+        return formError("#reg-error", "That team name is already taken — please choose another.");
+      }
+      const existing = await getDoc(doc(db, "teams", user.uid));
+      if (existing.exists()) {
+        await signOut(auth);
+        return formError("#reg-error", "This team is already registered — use “Log in” on the welcome screen.");
+      }
+    }
 
     const now = Date.now();
-    const data = {
-      name, nameKey, members,
-      uid: state.user.uid,
-      progress: 0,
-      solved: [],
-      wrongAttempts: 0,
-      finished: false,
-      startedAtMs: now,
-      lastActivityMs: now,
-      finishedAtMs: null,
-      durationMs: null,
-      createdAt: serverTimestamp()
-    };
-    const ref = await addDoc(collection(db, "teams"), data);
-    localStorage.setItem(LS_KEY, ref.id);
+    await setDoc(doc(db, "teams", user.uid), {
+      name, nameKey: nameKey(name), members,
+      progress: 0, solved: [], wrongAttempts: 0, finished: false,
+      startedAtMs: now, lastActivityMs: now, finishedAtMs: null, durationMs: null,
+      resetCount: 0, createdAt: serverTimestamp()
+    });
+    $("#form-register").reset();
     sfx.ding();
-    startGame(ref.id, data);
+    enterTeam(user.uid);
   } catch (err) {
     console.error(err);
-    formError("Could not register: " + (err.code || err.message));
+    formError("#reg-error", friendlyError(err));
   } finally {
-    btn.disabled = false;
-    btn.textContent = "Set Sail";
+    busyBtn(btn, false);
   }
 }
 
-// ---------------- game ----------------
-function startGame(id, data) {
+// ---------------- login ----------------
+async function login(ev) {
+  ev.preventDefault();
+  sfx.init();
+  formError("#login-error", "");
+  const name = cleanName($("#login-name").value);
+  const pass = $("#login-pass").value;
+  if (!name || !pass) return formError("#login-error", "Enter the team name and password.");
+
+  const btn = $("#btn-do-login");
+  busyBtn(btn, true, "Checking…");
+  try {
+    const user = (await signInWithEmailAndPassword(auth, await teamEmail(name), pass)).user;
+    const snap = await getDoc(doc(db, "teams", user.uid));
+    if (!snap.exists()) {
+      await signOut(auth);
+      return formError("#login-error", "This team was removed by the moderator. Please register again.");
+    }
+    $("#form-login").reset();
+    sfx.ding();
+    enterTeam(user.uid);
+  } catch (err) {
+    console.error(err);
+    formError("#login-error", friendlyError(err));
+  } finally {
+    busyBtn(btn, false);
+  }
+}
+
+function friendlyError(err) {
+  const c = err.code || "";
+  if (["auth/invalid-credential", "auth/wrong-password", "auth/user-not-found", "auth/invalid-login-credentials"].includes(c))
+    return "Wrong team name or password.";
+  if (c === "auth/too-many-requests") return "Too many attempts. Please wait a minute and try again.";
+  if (c === "auth/weak-password") return "The password must be at least 6 characters.";
+  if (c === "auth/operation-not-allowed") return "Email/Password sign-in is not enabled in Firebase (Authentication → Sign-in method).";
+  if (c === "auth/network-request-failed") return "No connection. Check the internet and try again.";
+  if (c === "permission-denied") return "Permission denied — check that the Firestore rules were published.";
+  return "Something went wrong: " + (c || err.message);
+}
+
+// ---------------- live team sync ----------------
+function enterTeam(id) {
+  if (state.unsub) state.unsub();
   state.teamId = id;
+  state.started = false;
+  state.unsub = onSnapshot(teamRef(), onTeamSnapshot, (err) => {
+    console.error(err);
+    if (err.code === "permission-denied") teamRemoved();
+  });
+}
+
+function onTeamSnapshot(snap) {
+  if (!snap.exists()) return teamRemoved();
+  const data = snap.data();
+
+  if (!state.started) {               // first load
+    state.started = true;
+    startGame(data);
+    return;
+  }
+
+  const serverSolved = data.solved || [];
+  const wasReset = (data.resetCount || 0) !== (state.team.resetCount || 0) || serverSolved.length < state.solved.length;
+
+  if (wasReset) {                     // moderator pressed "Reset"
+    $("#modal-win").hidden = true;
+    startGame(data);
+    sfx.wrong();
+    toast("The moderator reset your voyage. Te Fiti is a lava demon again!", "error", 4500);
+    return;
+  }
+
+  if (serverSolved.length > state.solved.length) {   // progress from another phone of the same team
+    state.team = { ...state.team, ...data };
+    state.solved = [...serverSolved];
+    buildStations();
+    updateHud();
+    updateStory();
+    scene.setStage(state.solved.length);
+    if (state.team.finished) { startTimer(); setTimeout(showWin, 4300); }
+    return;
+  }
+
+  state.team = { ...state.team, ...data, solved: state.solved };
+}
+
+async function teamRemoved() {
+  await leaveGame();
+  toast("Your team was removed by the moderator.", "error", 4500);
+}
+
+async function leaveGame() {
+  if (state.unsub) { state.unsub(); state.unsub = null; }
+  clearInterval(state.timer);
+  state.teamId = null;
+  state.started = false;
+  $("#modal-win").hidden = true;
+  $("#btn-continue").hidden = true;
+  try { await signOut(auth); } catch (e) { console.warn(e); }
+  show("screen-welcome");
+}
+
+// ---------------- game ----------------
+function startGame(data) {
   state.team = { ...data };
   state.solved = [...(data.solved || [])];
 
@@ -270,6 +403,12 @@ function shake(el) {
   el._sh = setTimeout(() => el.classList.remove("shake"), 500);
 }
 
+function saveErr(e) {
+  console.error(e);
+  if (e.code === "not-found" || e.code === "permission-denied") return teamRemoved();
+  toast("Progress not saved — check your connection.", "error");
+}
+
 async function submitCode(st, card, slot, input) {
   if (state.busy || slot.classList.contains("locked") || state.team.finished) return;
   sfx.init();
@@ -280,26 +419,22 @@ async function submitCode(st, card, slot, input) {
   try {
     const codeId = st.codes[await sha256(`${SALT}|${raw}`)];
 
-    // ---- wrong code ----
     if (!codeId) {
       shake(slot);
       sfx.wrong();
       scene.rage();
       toast("The lava roars! That code is not right.", "error");
       input.select();
-      state.team.wrongAttempts = (state.team.wrongAttempts || 0) + 1;
       updateDoc(teamRef(), { wrongAttempts: increment(1), lastActivityMs: Date.now() }).catch(saveErr);
       return;
     }
 
-    // ---- already used (e.g. same Station 1 code typed twice) ----
     if (state.solved.includes(codeId)) {
       input.value = "";
       toast("That piece is already in the heart — find the other code!", "info");
       return;
     }
 
-    // ---- correct code ----
     state.solved.push(codeId);
     const progress = state.solved.length;
     lockSlot(slot);
@@ -320,11 +455,10 @@ async function submitCode(st, card, slot, input) {
     updateHud();
     updateStory();
     if (finished) {
-      clearInterval(state.timer);
       startTimer();
       sfx.victory();
       scene.setStage(progress);
-      setTimeout(showWin, 4300);
+      setTimeout(() => { if (state.team.finished) showWin(); }, 4300);
     } else {
       sfx.correct();
       scene.setStage(progress);
@@ -336,6 +470,7 @@ async function submitCode(st, card, slot, input) {
 }
 
 function showWin() {
+  if (!state.teamId) return;
   $("#win-team").textContent = state.team.name;
   $("#win-time").textContent = fmt(state.team.durationMs || 0);
   $("#win-wrong").textContent = state.team.wrongAttempts || 0;

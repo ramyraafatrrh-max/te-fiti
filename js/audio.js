@@ -72,7 +72,6 @@ export function click() {
 }
 
 export function correct() {
-  // rising island chime
   [523.25, 659.25, 783.99, 1046.5].forEach((f, i) =>
     tone(f, i * 0.09, 0.6, { type: "triangle", gain: 0.16 })
   );
@@ -80,18 +79,14 @@ export function correct() {
 }
 
 export function wrong() {
-  // lava rumble
   noiseBurst(0, 0.7, 0.45, 260);
   tone(110, 0, 0.6, { type: "sawtooth", gain: 0.18, glideTo: 55, filter: 500 });
 }
 
 export function victory() {
-  // log-drum hits
   [0, 0.25, 0.5, 0.62, 0.75].forEach((t) => tone(90, t, 0.25, { type: "sine", gain: 0.35, glideTo: 60 }));
-  // pentatonic run
   const run = [392, 440, 523.25, 587.33, 659.25, 783.99, 880, 1046.5];
   run.forEach((f, i) => tone(f, 0.9 + i * 0.1, 0.5, { type: "triangle", gain: 0.14 }));
-  // warm final chord
   [523.25, 659.25, 783.99, 1046.5].forEach((f) => tone(f, 1.8, 2.6, { type: "sine", gain: 0.1 }));
   [261.63, 392].forEach((f) => tone(f, 1.8, 2.8, { type: "triangle", gain: 0.08 }));
 }

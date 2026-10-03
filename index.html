@@ -33,8 +33,9 @@
         Sail to the five stations, uncover the six hidden codes and return each piece of the heart.
         With every code her fire cools — until she remembers who she truly is.
       </p>
-      <button id="btn-begin" class="btn primary" disabled>Begin the Voyage</button>
-      <button id="btn-continue" class="btn ghost" hidden></button>
+      <button id="btn-continue" class="btn primary" hidden></button>
+      <button id="btn-begin" class="btn primary" disabled>Begin the Voyage — Register Team</button>
+      <button id="btn-login" class="btn ghost" disabled>My team is registered — Log in</button>
       <p id="conn-status" class="status">Connecting to the ocean…</p>
     </div>
   </section>
@@ -43,14 +44,34 @@
   <section id="screen-register" class="screen">
     <form id="form-register" class="card register" autocomplete="off">
       <h2>Register Your Crew</h2>
-      <p class="muted">Each team gets its own voyage and progress.</p>
-      <label for="team-name">Team name</label>
-      <input id="team-name" maxlength="30" placeholder="e.g. The Wayfinders" required />
-      <label for="team-members">Team members <span class="muted">(optional)</span></label>
-      <textarea id="team-members" maxlength="200" rows="3" placeholder="Names separated by commas"></textarea>
-      <p id="form-error" class="error-text" hidden></p>
+      <p class="muted">Each team has its own voyage, protected by a team password.</p>
+      <label for="reg-name">Team name</label>
+      <input id="reg-name" maxlength="30" placeholder="e.g. The Wayfinders" required />
+      <label for="reg-members">Team members <span class="muted">(optional)</span></label>
+      <textarea id="reg-members" maxlength="200" rows="2" placeholder="Names separated by commas"></textarea>
+      <label for="reg-pass">Team password <span class="muted">(at least 6 characters)</span></label>
+      <input id="reg-pass" type="password" minlength="6" autocomplete="new-password" required />
+      <label for="reg-pass2">Confirm password</label>
+      <input id="reg-pass2" type="password" minlength="6" autocomplete="new-password" required />
+      <p class="hint">Keep this password — you need it to continue on another phone.</p>
+      <p id="reg-error" class="error-text" hidden></p>
       <button id="btn-register" type="submit" class="btn primary">Set Sail</button>
-      <button id="btn-back" type="button" class="btn link">← Back</button>
+      <button type="button" class="btn link js-back">← Back</button>
+    </form>
+  </section>
+
+  <!-- ================= LOGIN ================= -->
+  <section id="screen-login" class="screen">
+    <form id="form-login" class="card register" autocomplete="off">
+      <h2>Team Login</h2>
+      <p class="muted">Continue your team's voyage.</p>
+      <label for="login-name">Team name</label>
+      <input id="login-name" maxlength="30" required />
+      <label for="login-pass">Team password</label>
+      <input id="login-pass" type="password" autocomplete="current-password" required />
+      <p id="login-error" class="error-text" hidden></p>
+      <button id="btn-do-login" type="submit" class="btn primary">Log in</button>
+      <button type="button" class="btn link js-back">← Back</button>
     </form>
   </section>
 
@@ -64,7 +85,8 @@
       </div>
       <div class="hud-right">
         <span id="hud-timer" class="timer">00:00</span>
-        <button id="btn-mute" class="icon-btn" aria-label="Mute sound">🔊</button>
+        <button id="btn-mute" class="icon-btn" aria-label="Mute sound" title="Sound on/off">🔊</button>
+        <button id="btn-logout" class="icon-btn" aria-label="Log out" title="Log out">⎋</button>
       </div>
     </header>
 
@@ -95,13 +117,11 @@
             <filter id="fBlur"><feGaussianBlur stdDeviation="6"/></filter>
           </defs>
 
-          <!-- sky -->
           <rect id="skyLava"   class="t" x="0" y="0" width="400" height="420" fill="url(#gLava)"/>
           <rect id="skyCalm"   class="t" x="0" y="0" width="400" height="420" fill="url(#gCalm)" style="opacity:0"/>
           <rect id="skyHealed" class="t" x="0" y="0" width="400" height="420" fill="url(#gHealed)" style="opacity:0"/>
           <circle id="sun" class="t" cx="330" cy="70" r="55" fill="url(#gSun)" style="opacity:0"/>
 
-          <!-- smoke -->
           <g id="smoke" class="t" filter="url(#fBlur)">
             <ellipse class="cloud c1" cx="80"  cy="70"  rx="70" ry="22" fill="#3b2d2a"/>
             <ellipse class="cloud c2" cx="310" cy="50"  rx="80" ry="24" fill="#2e2321"/>
@@ -109,20 +129,15 @@
             <ellipse class="cloud c1" cx="350" cy="140" rx="50" ry="16" fill="#3b2d2a"/>
           </g>
 
-          <!-- sea -->
           <rect x="0" y="335" width="400" height="85" fill="url(#gSea)"/>
           <path class="wave w1" d="M-40 345 q20 -8 40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0" stroke="#7fe0ff" stroke-opacity=".5" stroke-width="2" fill="none"/>
           <path class="wave w2" d="M-40 370 q20 -8 40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0" stroke="#7fe0ff" stroke-opacity=".3" stroke-width="2" fill="none"/>
 
-          <!-- island -->
           <path id="island" class="t" d="M10 352 Q200 300 390 352 Q200 368 10 352 Z" fill="#2b1912"/>
 
-          <!-- figure -->
           <g id="figure">
             <g id="shakeG">
-              <!-- hair -->
               <path class="hair t" d="M200 68 C138 68 116 108 118 150 C104 200 88 262 52 346 L348 346 C312 262 296 200 282 150 C284 108 262 68 200 68 Z" fill="#170b09"/>
-              <!-- flames on hair -->
               <g id="flames" class="t">
                 <path class="flame f1" d="M118 152 c-9 -9 -5 -22 2 -30 c0 11 11 15 6 30 z" fill="url(#gFlame)"/>
                 <path class="flame f2" d="M106 204 c-9 -9 -5 -22 2 -30 c0 11 11 15 6 30 z" fill="url(#gFlame)"/>
@@ -138,14 +153,12 @@
               </g>
               <g id="leaves" class="t" style="opacity:0"></g>
 
-              <!-- arms, body, neck, head -->
               <path class="skin t" d="M152 220 Q115 240 100 290 Q92 320 80 344 L108 344 Q118 310 130 285 Q140 262 160 250 Z" fill="#2a1714"/>
               <path class="skin t" d="M248 220 Q285 240 300 290 Q308 320 320 344 L292 344 Q282 310 270 285 Q260 262 240 250 Z" fill="#2a1714"/>
               <path class="skin t" d="M150 215 Q200 198 250 215 Q268 260 275 344 L125 344 Q132 260 150 215 Z" fill="#2a1714"/>
               <path class="skin t" d="M186 176 L214 176 L218 212 L182 212 Z" fill="#2a1714"/>
               <ellipse class="skin t" cx="200" cy="135" rx="40" ry="50" fill="#2a1714"/>
 
-              <!-- lava cracks -->
               <g id="cracks" class="t" fill="none" stroke="#ff7a1a" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" filter="url(#fGlow)">
                 <path d="M176 94 L186 116 L178 138"/>
                 <path d="M226 98 L216 122 L224 146"/>
@@ -159,7 +172,6 @@
                 <path d="M250 349 L292 338 L340 352"/>
               </g>
 
-              <!-- angry face (lava demon) -->
               <g id="faceAngry" class="t">
                 <path class="eye t" d="M172 130 L194 136 L190 143 L174 140 Z" fill="#ffd23f" filter="url(#fGlow)"/>
                 <path class="eye t" d="M228 130 L206 136 L210 143 L226 140 Z" fill="#ffd23f" filter="url(#fGlow)"/>
@@ -168,7 +180,6 @@
                 <path id="mouthAngry" class="mouth" d="M182 160 Q200 150 218 160 L214 172 Q200 166 186 172 Z" fill="#ff5a1a" filter="url(#fGlow)"/>
               </g>
 
-              <!-- calm, happy face (Te Fiti) -->
               <g id="faceCalm" class="t" style="opacity:0" fill="none" stroke="#0c3d22" stroke-width="2.6" stroke-linecap="round">
                 <path d="M174 136 Q183 143 192 136"/>
                 <path d="M208 136 Q217 143 226 136"/>
@@ -179,7 +190,6 @@
 
               <g id="flowers"></g>
 
-              <!-- heart of Te Fiti -->
               <circle id="heartAura" class="t" cx="200" cy="262" r="42" fill="url(#gHeartAura)" style="opacity:.15"/>
               <ellipse id="heartHole" cx="200" cy="262" rx="20" ry="23" fill="#120806" stroke="#3a1f18" stroke-width="2"/>
               <path id="heartSpiral" d="M200 262 a4 4 0 0 1 8 0 a8 8 0 0 1 -16 0 a12 12 0 0 1 24 0 a16 16 0 0 1 -32 0"
