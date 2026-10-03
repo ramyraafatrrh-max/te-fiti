@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#062a3a" />
+  <title>The Heart of Te Fiti</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@400;600;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div id="app">
+
+  <!-- ================= WELCOME ================= -->
+  <section id="screen-welcome" class="screen active">
+    <div class="card welcome">
+      <svg class="logo-heart" viewBox="0 0 100 100" aria-hidden="true">
+        <defs>
+          <radialGradient id="lgGlow"><stop offset="0" stop-color="#7dffb3"/><stop offset="1" stop-color="#7dffb3" stop-opacity="0"/></radialGradient>
+        </defs>
+        <circle cx="50" cy="50" r="48" fill="url(#lgGlow)" opacity=".55"/>
+        <ellipse cx="50" cy="50" rx="26" ry="30" fill="#0f6b45"/>
+        <path d="M50 50 a5 5 0 0 1 10 0 a10 10 0 0 1 -20 0 a15 15 0 0 1 30 0 a20 20 0 0 1 -40 0"
+              fill="none" stroke="#9dffcb" stroke-width="4" stroke-linecap="round"/>
+      </svg>
+      <h1>The Heart of Te Fiti</h1>
+      <p class="tagline">Five stations · Six codes · One heart</p>
+      <p class="story">
+        When the heart of Te Fiti was taken, darkness spread across the ocean and the island goddess
+        turned into a demon of lava and fire. The ocean has chosen <strong>your team</strong>.
+        Sail to the five stations, uncover the six hidden codes and return each piece of the heart.
+        With every code her fire cools — until she remembers who she truly is.
+      </p>
+      <button id="btn-begin" class="btn primary" disabled>Begin the Voyage</button>
+      <button id="btn-continue" class="btn ghost" hidden></button>
+      <p id="conn-status" class="status">Connecting to the ocean…</p>
+    </div>
+  </section>
+
+  <!-- ================= REGISTRATION ================= -->
+  <section id="screen-register" class="screen">
+    <form id="form-register" class="card register" autocomplete="off">
+      <h2>Register Your Crew</h2>
+      <p class="muted">Each team gets its own voyage and progress.</p>
+      <label for="team-name">Team name</label>
+      <input id="team-name" maxlength="30" placeholder="e.g. The Wayfinders" required />
+      <label for="team-members">Team members <span class="muted">(optional)</span></label>
+      <textarea id="team-members" maxlength="200" rows="3" placeholder="Names separated by commas"></textarea>
+      <p id="form-error" class="error-text" hidden></p>
+      <button id="btn-register" type="submit" class="btn primary">Set Sail</button>
+      <button id="btn-back" type="button" class="btn link">← Back</button>
+    </form>
+  </section>
+
+  <!-- ================= GAME ================= -->
+  <section id="screen-game" class="screen">
+    <header class="hud">
+      <div class="hud-team"><span class="hud-label">Crew</span><span id="hud-team">—</span></div>
+      <div class="hud-heart">
+        <div id="pips" class="pips"></div>
+        <span id="hud-count">0 / 6</span>
+      </div>
+      <div class="hud-right">
+        <span id="hud-timer" class="timer">00:00</span>
+        <button id="btn-mute" class="icon-btn" aria-label="Mute sound">🔊</button>
+      </div>
+    </header>
+
+    <div class="game-layout">
+      <div id="scene-wrap" class="scene-wrap">
+        <svg id="scene" class="shake-3" viewBox="0 0 400 420" preserveAspectRatio="xMidYMid slice" aria-label="Te Fiti">
+          <defs>
+            <linearGradient id="gLava" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#160404"/><stop offset=".55" stop-color="#5a1408"/><stop offset="1" stop-color="#c2410c"/>
+            </linearGradient>
+            <linearGradient id="gCalm" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#1b3a5c"/><stop offset=".6" stop-color="#5f7fa0"/><stop offset="1" stop-color="#e9b98a"/>
+            </linearGradient>
+            <linearGradient id="gHealed" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#3db4ef"/><stop offset=".6" stop-color="#a8e3fb"/><stop offset="1" stop-color="#fff2c2"/>
+            </linearGradient>
+            <linearGradient id="gSea" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#127a9c"/><stop offset="1" stop-color="#04283c"/>
+            </linearGradient>
+            <linearGradient id="gFlame" x1="0" y1="1" x2="0" y2="0">
+              <stop offset="0" stop-color="#ff3d00"/><stop offset=".6" stop-color="#ff9100"/><stop offset="1" stop-color="#ffe066"/>
+            </linearGradient>
+            <radialGradient id="gHeartAura"><stop offset="0" stop-color="#8dffbf"/><stop offset="1" stop-color="#8dffbf" stop-opacity="0"/></radialGradient>
+            <radialGradient id="gSun"><stop offset="0" stop-color="#fffbe0"/><stop offset=".6" stop-color="#ffe680"/><stop offset="1" stop-color="#ffe680" stop-opacity="0"/></radialGradient>
+            <filter id="fGlow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <filter id="fBlur"><feGaussianBlur stdDeviation="6"/></filter>
+          </defs>
+
+          <!-- sky -->
+          <rect id="skyLava"   class="t" x="0" y="0" width="400" height="420" fill="url(#gLava)"/>
+          <rect id="skyCalm"   class="t" x="0" y="0" width="400" height="420" fill="url(#gCalm)" style="opacity:0"/>
+          <rect id="skyHealed" class="t" x="0" y="0" width="400" height="420" fill="url(#gHealed)" style="opacity:0"/>
+          <circle id="sun" class="t" cx="330" cy="70" r="55" fill="url(#gSun)" style="opacity:0"/>
+
+          <!-- smoke -->
+          <g id="smoke" class="t" filter="url(#fBlur)">
+            <ellipse class="cloud c1" cx="80"  cy="70"  rx="70" ry="22" fill="#3b2d2a"/>
+            <ellipse class="cloud c2" cx="310" cy="50"  rx="80" ry="24" fill="#2e2321"/>
+            <ellipse class="cloud c3" cx="200" cy="30"  rx="90" ry="20" fill="#47372f"/>
+            <ellipse class="cloud c1" cx="350" cy="140" rx="50" ry="16" fill="#3b2d2a"/>
+          </g>
+
+          <!-- sea -->
+          <rect x="0" y="335" width="400" height="85" fill="url(#gSea)"/>
+          <path class="wave w1" d="M-40 345 q20 -8 40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0" stroke="#7fe0ff" stroke-opacity=".5" stroke-width="2" fill="none"/>
+          <path class="wave w2" d="M-40 370 q20 -8 40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0" stroke="#7fe0ff" stroke-opacity=".3" stroke-width="2" fill="none"/>
+
+          <!-- island -->
+          <path id="island" class="t" d="M10 352 Q200 300 390 352 Q200 368 10 352 Z" fill="#2b1912"/>
+
+          <!-- figure -->
+          <g id="figure">
+            <g id="shakeG">
+              <!-- hair -->
+              <path class="hair t" d="M200 68 C138 68 116 108 118 150 C104 200 88 262 52 346 L348 346 C312 262 296 200 282 150 C284 108 262 68 200 68 Z" fill="#170b09"/>
+              <!-- flames on hair -->
+              <g id="flames" class="t">
+                <path class="flame f1" d="M118 152 c-9 -9 -5 -22 2 -30 c0 11 11 15 6 30 z" fill="url(#gFlame)"/>
+                <path class="flame f2" d="M106 204 c-9 -9 -5 -22 2 -30 c0 11 11 15 6 30 z" fill="url(#gFlame)"/>
+                <path class="flame f3" d="M92 258 c-9 -9 -5 -22 2 -30 c0 11 11 15 6 30 z" fill="url(#gFlame)"/>
+                <path class="flame f1" d="M74 312 c-9 -9 -5 -22 2 -30 c0 11 11 15 6 30 z" fill="url(#gFlame)"/>
+                <path class="flame f2" d="M280 152 c9 -9 5 -22 -2 -30 c0 11 -11 15 -6 30 z" fill="url(#gFlame)"/>
+                <path class="flame f3" d="M292 204 c9 -9 5 -22 -2 -30 c0 11 -11 15 -6 30 z" fill="url(#gFlame)"/>
+                <path class="flame f1" d="M306 258 c9 -9 5 -22 -2 -30 c0 11 -11 15 -6 30 z" fill="url(#gFlame)"/>
+                <path class="flame f2" d="M324 312 c9 -9 5 -22 -2 -30 c0 11 -11 15 -6 30 z" fill="url(#gFlame)"/>
+                <path class="flame f3" d="M160 80 c-8 -10 -3 -24 4 -32 c-1 12 10 17 4 32 z" fill="url(#gFlame)"/>
+                <path class="flame f1" d="M198 70 c-9 -11 -4 -27 4 -36 c-1 13 11 19 4 36 z" fill="url(#gFlame)"/>
+                <path class="flame f2" d="M238 80 c8 -10 3 -24 -4 -32 c1 12 -10 17 -4 32 z" fill="url(#gFlame)"/>
+              </g>
+              <g id="leaves" class="t" style="opacity:0"></g>
+
+              <!-- arms, body, neck, head -->
+              <path class="skin t" d="M152 220 Q115 240 100 290 Q92 320 80 344 L108 344 Q118 310 130 285 Q140 262 160 250 Z" fill="#2a1714"/>
+              <path class="skin t" d="M248 220 Q285 240 300 290 Q308 320 320 344 L292 344 Q282 310 270 285 Q260 262 240 250 Z" fill="#2a1714"/>
+              <path class="skin t" d="M150 215 Q200 198 250 215 Q268 260 275 344 L125 344 Q132 260 150 215 Z" fill="#2a1714"/>
+              <path class="skin t" d="M186 176 L214 176 L218 212 L182 212 Z" fill="#2a1714"/>
+              <ellipse class="skin t" cx="200" cy="135" rx="40" ry="50" fill="#2a1714"/>
+
+              <!-- lava cracks -->
+              <g id="cracks" class="t" fill="none" stroke="#ff7a1a" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" filter="url(#fGlow)">
+                <path d="M176 94 L186 116 L178 138"/>
+                <path d="M226 98 L216 122 L224 146"/>
+                <path d="M170 228 L182 258 L171 290 L180 334"/>
+                <path d="M231 226 L219 256 L230 292 L222 336"/>
+                <path d="M140 160 L130 210 L118 262 L104 312"/>
+                <path d="M262 165 L272 215 L284 268 L298 318"/>
+                <path d="M122 268 L108 302"/>
+                <path d="M280 268 L294 304"/>
+                <path d="M60 352 L110 340 L150 349"/>
+                <path d="M250 349 L292 338 L340 352"/>
+              </g>
+
+              <!-- angry face (lava demon) -->
+              <g id="faceAngry" class="t">
+                <path class="eye t" d="M172 130 L194 136 L190 143 L174 140 Z" fill="#ffd23f" filter="url(#fGlow)"/>
+                <path class="eye t" d="M228 130 L206 136 L210 143 L226 140 Z" fill="#ffd23f" filter="url(#fGlow)"/>
+                <path id="browL" class="brow" d="M166 121 L197 132" stroke="#0a0302" stroke-width="5" stroke-linecap="round"/>
+                <path id="browR" class="brow" d="M234 121 L203 132" stroke="#0a0302" stroke-width="5" stroke-linecap="round"/>
+                <path id="mouthAngry" class="mouth" d="M182 160 Q200 150 218 160 L214 172 Q200 166 186 172 Z" fill="#ff5a1a" filter="url(#fGlow)"/>
+              </g>
+
+              <!-- calm, happy face (Te Fiti) -->
+              <g id="faceCalm" class="t" style="opacity:0" fill="none" stroke="#0c3d22" stroke-width="2.6" stroke-linecap="round">
+                <path d="M174 136 Q183 143 192 136"/>
+                <path d="M208 136 Q217 143 226 136"/>
+                <path d="M187 159 Q200 170 213 159"/>
+                <circle cx="176" cy="151" r="6" fill="#ff8fb8" stroke="none" opacity=".45"/>
+                <circle cx="224" cy="151" r="6" fill="#ff8fb8" stroke="none" opacity=".45"/>
+              </g>
+
+              <g id="flowers"></g>
+
+              <!-- heart of Te Fiti -->
+              <circle id="heartAura" class="t" cx="200" cy="262" r="42" fill="url(#gHeartAura)" style="opacity:.15"/>
+              <ellipse id="heartHole" cx="200" cy="262" rx="20" ry="23" fill="#120806" stroke="#3a1f18" stroke-width="2"/>
+              <path id="heartSpiral" d="M200 262 a4 4 0 0 1 8 0 a8 8 0 0 1 -16 0 a12 12 0 0 1 24 0 a16 16 0 0 1 -32 0"
+                    pathLength="100" fill="none" stroke="#7dffb3" stroke-width="3.6" stroke-linecap="round"
+                    filter="url(#fGlow)" style="stroke-dasharray:100;stroke-dashoffset:100"/>
+              <circle id="pulseRing" cx="200" cy="262" r="20" fill="none" stroke="#9dffcb" stroke-width="3"/>
+            </g>
+          </g>
+        </svg>
+        <canvas class="fx"></canvas>
+        <div class="flash"></div>
+      </div>
+
+      <div class="panel">
+        <p id="story-line" class="story-line"></p>
+        <div id="stations" class="stations"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= WIN MODAL ================= -->
+  <div id="modal-win" class="modal" hidden>
+    <div class="modal-card">
+      <div class="modal-flowers">🌺 🌿 💚 🌿 🌺</div>
+      <h2>Congratulations!</h2>
+      <p class="win-team" id="win-team"></p>
+      <p>You returned all six pieces of the heart. Te Fiti is awake again — green, happy and spreading
+        <strong>love</strong>, <strong>happiness</strong> and <strong>peace</strong> across the ocean.</p>
+      <div class="win-stats">
+        <div><span id="win-time">—</span><small>Voyage time</small></div>
+        <div><span id="win-wrong">0</span><small>Wrong attempts</small></div>
+      </div>
+      <button id="btn-close-win" class="btn primary">Admire the island</button>
+    </div>
+  </div>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+</div>
+
+<script type="module" src="js/game.js"></script>
+</body>
+</html>

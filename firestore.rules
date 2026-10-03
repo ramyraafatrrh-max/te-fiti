@@ -1,0 +1,40 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /teams/{teamId} {
+      // Any signed-in (anonymous) device can read teams: needed for the
+      // monitor screen and for the "team name already taken" check.
+      allow read: if request.auth != null;
+
+      // A device can only create a team that belongs to itself, starting at 0.
+      allow create: if request.auth != null
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 2
+        && request.resource.data.name.size() <= 30
+        && request.resource.data.progress == 0
+        && request.resource.data.solved.size() == 0
+        && request.resource.data.finished == false;
+
+      // Only the device that created the team can update it.
+      // Progress can only go up (max 6); name/owner/start time can't change.
+      allow update: if request.auth != null
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.name == resource.data.name
+        && request.resource.data.startedAtMs == resource.data.startedAtMs
+        && request.resource.data.progress >= resource.data.progress
+        && request.resource.data.progress <= 6
+        && request.resource.data.solved.size() == request.resource.data.progress;
+
+      // Deleting teams is done from the Firebase console only.
+      allow delete: if false;
+    }
+
+    // Everything else is closed.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

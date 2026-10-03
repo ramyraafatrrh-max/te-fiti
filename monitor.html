@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Te Fiti — Voyage Monitor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@400;600;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/monitor.css" />
+</head>
+<body>
+  <!-- PIN gate -->
+  <section id="gate" class="screen active">
+    <form id="gate-form" class="card" autocomplete="off" style="text-align:center">
+      <h2>Voyage Monitor</h2>
+      <p class="muted">Enter the moderator PIN to view all teams.</p>
+      <input id="gate-pin" type="password" inputmode="numeric" placeholder="PIN" style="text-align:center;letter-spacing:6px" />
+      <p id="gate-error" class="error-text" hidden>Wrong PIN</p>
+      <button class="btn primary" type="submit">Open Monitor</button>
+    </form>
+  </section>
+
+  <!-- dashboard -->
+  <section id="dash" class="screen">
+    <header class="mon-head">
+      <div>
+        <h1>The Heart of Te Fiti <span>· Live Voyage Monitor</span></h1>
+        <p id="mon-status" class="muted">Connecting…</p>
+      </div>
+      <div class="stats">
+        <div><b id="st-teams">0</b><small>Teams</small></div>
+        <div><b id="st-active">0</b><small>Sailing</small></div>
+        <div><b id="st-done">0</b><small>Restored Te Fiti</small></div>
+        <div><b id="st-codes">0</b><small>Codes returned</small></div>
+      </div>
+    </header>
+
+    <div id="champion" class="champion" hidden></div>
+
+    <div class="mon-table">
+      <div class="mon-row mon-header">
+        <span>#</span><span>Team</span><span>Te Fiti</span><span>Heart</span><span>Stations</span><span>Wrong</span><span>Time</span><span>Last activity</span>
+      </div>
+      <div id="rows"></div>
+      <p id="empty" class="muted empty">No teams registered yet. Waiting for the first canoe… 🛶</p>
+    </div>
+  </section>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="js/monitor.js"></script>
+</body>
+</html>
